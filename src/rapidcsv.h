@@ -31,12 +31,6 @@ typedef SSIZE_T ssize_t;
 
 namespace rapidcsv
 {
-#if defined(_MSC_VER)
-  static const bool sPlatformHasCR = true;
-#else
-  static const bool sPlatformHasCR = false;
-#endif
-
   /**
    * @brief     Datastructure holding parameters controlling how invalid numbers (including
    *            empty strings) should be handled.
@@ -110,34 +104,6 @@ namespace rapidcsv
     Converter(const ConverterParams& pConverterParams)
       : mConverterParams(pConverterParams)
     {
-    }
-
-    /**
-     * @brief   Converts numerical value to string representation.
-     * @param   pVal                  numerical value
-     * @param   pStr                  output string
-     */
-    void ToStr(const T& pVal, std::string& pStr) const
-    {
-      if (typeid(T) == typeid(int) ||
-          typeid(T) == typeid(long) ||
-          typeid(T) == typeid(long long) ||
-          typeid(T) == typeid(unsigned) ||
-          typeid(T) == typeid(unsigned long) ||
-          typeid(T) == typeid(unsigned long long) ||
-          typeid(T) == typeid(float) ||
-          typeid(T) == typeid(double) ||
-          typeid(T) == typeid(long double) ||
-          typeid(T) == typeid(char))
-      {
-        std::ostringstream out;
-        out << pVal;
-        pStr = out.str();
-      }
-      else
-      {
-        throw no_converter();
-      }
     }
 
     /**
@@ -245,17 +211,6 @@ namespace rapidcsv
    * @param     pStr                  string
    */
   template<>
-  inline void Converter<std::string>::ToStr(const std::string& pVal, std::string& pStr) const
-  {
-    pStr = pVal;
-  }
-
-  /**
-   * @brief     Specialized implementation handling string to string conversion.
-   * @param     pVal                  string
-   * @param     pStr                  string
-   */
-  template<>
   inline void Converter<std::string>::ToVal(const std::string& pStr, std::string& pVal) const
   {
     pVal = pStr;
@@ -301,13 +256,9 @@ namespace rapidcsv
     /**
      * @brief   Constructor
      * @param   pSeparator            specifies the column separator (default ',').
-     * @param   pHasCR                specifies whether a new document (i.e. not an existing document read)
-     *                                should use CR/LF instead of only LF (default is to use standard
-     *                                behavior of underlying platforms - CR/LF for Win, and LF for others).
      */
-    explicit SeparatorParams(const char pSeparator = ',', const bool pHasCR = sPlatformHasCR)
+    explicit SeparatorParams(const char pSeparator = ',')
       : mSeparator(pSeparator)
-      , mHasCR(pHasCR)
     {
     }
 
@@ -315,11 +266,6 @@ namespace rapidcsv
      * @brief   specifies the column separator.
      */
     char mSeparator;
-
-    /**
-     * @brief   specifies whether new documents should use CR/LF instead of LF.
-     */
-    bool mHasCR;
   };
 
   /**
@@ -379,21 +325,6 @@ namespace rapidcsv
     }
 
     /**
-     * @brief   Write Document data to file.
-     * @param   pPath                 optionally specifies the path where the CSV-file will be created
-     *                                (if not specified, the original path provided when creating or
-     *                                loading the Document data will be used).
-     */
-    void Save(const std::string& pPath = std::string())
-    {
-      if (!pPath.empty())
-      {
-        mPath = pPath;
-      }
-      WriteCsv();
-    }
-
-    /**
      * @brief   Get column by index.
      * @param   pColumnIdx            zero-based column index.
      * @returns vector of column data.
@@ -430,56 +361,6 @@ namespace rapidcsv
         throw std::out_of_range("column not found: " + pColumnName);
       }
       return GetColumn<T>(columnIdx);
-    }
-
-    /**
-     * @brief   Set column by index.
-     * @param   pColumnIdx            zero-based column index.
-     * @param   pColumn               vector of column data.
-     */
-    template<typename T>
-    void SetColumn(const size_t pColumnIdx, const std::vector<T>& pColumn)
-    {
-      const size_t columnIdx = pColumnIdx + (mLabelParams.mRowNameIdx + 1);
-
-      while (pColumn.size() + (mLabelParams.mColumnNameIdx + 1) > GetDataRowCount())
-      {
-        std::vector<std::string> row;
-        row.resize(GetDataColumnCount());
-        mData.push_back(row);
-      }
-
-      if ((columnIdx + 1) > GetDataColumnCount())
-      {
-        for (auto itRow = mData.begin(); itRow != mData.end(); ++itRow)
-        {
-          itRow->resize(columnIdx + 1 + (mLabelParams.mRowNameIdx + 1));
-        }
-      }
-
-      Converter<T> converter(mConverterParams);
-      for (auto itRow = pColumn.begin(); itRow != pColumn.end(); ++itRow)
-      {
-        std::string str;
-        converter.ToStr(*itRow, str);
-        mData.at(std::distance(pColumn.begin(), itRow) + (mLabelParams.mColumnNameIdx + 1)).at(columnIdx) = str;
-      }
-    }
-
-    /**
-     * @brief   Set column by name.
-     * @param   pColumnName           column label name.
-     * @param   pColumn               vector of column data.
-     */
-    template<typename T>
-    void SetColumn(const std::string& pColumnName, const std::vector<T>& pColumn)
-    {
-      const ssize_t columnIdx = GetColumnIdx(pColumnName);
-      if (columnIdx < 0)
-      {
-        throw std::out_of_range("column not found: " + pColumnName);
-      }
-      SetColumn<T>(columnIdx, pColumn);
     }
 
     /**
@@ -559,56 +440,6 @@ namespace rapidcsv
     }
 
     /**
-     * @brief   Set row by index.
-     * @param   pRowIdx               zero-based row index.
-     * @param   pRow                  vector of row data.
-     */
-    template<typename T>
-    void SetRow(const size_t pRowIdx, const std::vector<T>& pRow)
-    {
-      const size_t rowIdx = pRowIdx + (mLabelParams.mColumnNameIdx + 1);
-
-      while ((rowIdx + 1) > GetDataRowCount())
-      {
-        std::vector<std::string> row;
-        row.resize(GetDataColumnCount());
-        mData.push_back(row);
-      }
-
-      if (pRow.size() > GetDataColumnCount())
-      {
-        for (auto itRow = mData.begin(); itRow != mData.end(); ++itRow)
-        {
-          itRow->resize(pRow.size() + (mLabelParams.mRowNameIdx + 1));
-        }
-      }
-
-      Converter<T> converter(mConverterParams);
-      for (auto itCol = pRow.begin(); itCol != pRow.end(); ++itCol)
-      {
-        std::string str;
-        converter.ToStr(*itCol, str);
-        mData.at(rowIdx).at(std::distance(pRow.begin(), itCol) + (mLabelParams.mRowNameIdx + 1)) = str;
-      }
-    }
-
-    /**
-     * @brief   Set row by name.
-     * @param   pRowName              row label name.
-     * @param   pRow                  vector of row data.
-     */
-    template<typename T>
-    void SetRow(const std::string& pRowName, const std::vector<T>& pRow)
-    {
-      ssize_t rowIdx = GetRowIdx(pRowName);
-      if (rowIdx < 0)
-      {
-        throw std::out_of_range("row not found: " + pRowName);
-      }
-      return SetRow<T>(rowIdx, pRow);
-    }
-
-    /**
      * @brief   Remove row by index.
      * @param   pRowIdx               zero-based row index.
      */
@@ -685,63 +516,6 @@ namespace rapidcsv
     }
 
     /**
-     * @brief   Set cell by index.
-     * @param   pRowIdx               zero-based row index.
-     * @param   pColumnIdx            zero-based column index.
-     * @param   pCell                 cell data.
-     */
-    template<typename T>
-    void SetCell(const size_t pColumnIdx, const size_t pRowIdx, const T& pCell)
-    {
-      const size_t columnIdx = pColumnIdx + (mLabelParams.mRowNameIdx + 1);
-      const size_t rowIdx = pRowIdx + (mLabelParams.mColumnNameIdx + 1);
-
-      while ((rowIdx + 1) > GetDataRowCount())
-      {
-        std::vector<std::string> row;
-        row.resize(GetDataColumnCount());
-        mData.push_back(row);
-      }
-
-      if ((columnIdx + 1) > GetDataColumnCount())
-      {
-        for (auto itRow = mData.begin(); itRow != mData.end(); ++itRow)
-        {
-          itRow->resize(columnIdx + 1);
-        }
-      }
-
-      std::string str;
-      Converter<T> converter(mConverterParams);
-      converter.ToStr(pCell, str);
-      mData.at(rowIdx).at(columnIdx) = str;
-    }
-
-    /**
-     * @brief   Set cell by name.
-     * @param   pColumnName           column label name.
-     * @param   pRowName              row label name.
-     * @param   pCell                 cell data.
-     */
-    template<typename T>
-    void SetCell(const std::string& pColumnName, const std::string& pRowName, const T& pCell)
-    {
-      const ssize_t columnIdx = GetColumnIdx(pColumnName);
-      if (columnIdx < 0)
-      {
-        throw std::out_of_range("column not found: " + pColumnName);
-      }
-
-      const ssize_t rowIdx = GetRowIdx(pRowName);
-      if (rowIdx < 0)
-      {
-        throw std::out_of_range("row not found: " + pRowName);
-      }
-
-      SetCell<T>(columnIdx, rowIdx, pCell);
-    }
-
-    /**
      * @brief   Get column name
      * @param   pColumnIdx            zero-based column index.
      * @returns column name.
@@ -755,23 +529,6 @@ namespace rapidcsv
       }
 
       return mData.at(mLabelParams.mColumnNameIdx).at(columnIdx);
-    }
-
-    /**
-     * @brief   Set column name
-     * @param   pColumnIdx            zero-based column index.
-     * @param   pColumnName           column name.
-     */
-    void SetColumnName(size_t pColumnIdx, const std::string& pColumnName)
-    {
-      const ssize_t columnIdx = pColumnIdx + (mLabelParams.mRowNameIdx + 1);
-      mColumnNames[pColumnName] = columnIdx;
-      if (mLabelParams.mColumnNameIdx < 0)
-      {
-        throw std::out_of_range("column name row index < 0: " + std::to_string(mLabelParams.mColumnNameIdx));
-      }
-
-      mData.at(mLabelParams.mColumnNameIdx).at(columnIdx) = pColumnName;
     }
 
     /**
@@ -804,23 +561,6 @@ namespace rapidcsv
       }
 
       return mData.at(rowIdx).at(mLabelParams.mRowNameIdx);
-    }
-
-    /**
-     * @brief   Set row name
-     * @param   pRowIdx               zero-based row index.
-     * @param   pRowName              row name.
-     */
-    void SetRowName(size_t pRowIdx, const std::string& pRowName)
-    {
-      const ssize_t rowIdx = pRowIdx + (mLabelParams.mColumnNameIdx + 1);
-      mRowNames[pRowName] = rowIdx;
-      if (mLabelParams.mRowNameIdx < 0)
-      {
-        throw std::out_of_range("row name column index < 0: " + std::to_string(mLabelParams.mRowNameIdx));
-      }
-
-      mData.at(rowIdx).at(mLabelParams.mRowNameIdx) = pRowName;
     }
 
     /**
@@ -915,9 +655,6 @@ namespace rapidcsv
         row.clear();
       }
 
-      // Assume CR/LF if at least half the linebreaks have CR
-      mSeparatorParams.mHasCR = (cr > (lf / 2));
-
       // Set up column labels
       if ((mLabelParams.mColumnNameIdx >= 0) &&
           (mData.size() > 0))
@@ -942,25 +679,6 @@ namespace rapidcsv
       }
     }
 
-    void WriteCsv() const
-    {
-      std::ofstream file;
-      file.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-      file.open(mPath, std::ios::binary | std::ios::trunc);
-      for (auto itr = mData.begin(); itr != mData.end(); ++itr)
-      {
-        for (auto itc = itr->begin(); itc != itr->end(); ++itc)
-        {
-          file << *itc;
-          if (std::distance(itc, itr->end()) > 1)
-          {
-            file << mSeparatorParams.mSeparator;
-          }
-        }
-        file << (mSeparatorParams.mHasCR ? "\r\n" : "\n");
-      }
-    }
-
     ssize_t GetColumnIdx(const std::string& pColumnName) const
     {
       if (mLabelParams.mColumnNameIdx >= 0)
@@ -970,6 +688,11 @@ namespace rapidcsv
           return mColumnNames.at(pColumnName) - (mLabelParams.mRowNameIdx + 1);
         }
       }
+      else
+      {
+        throw std::out_of_range("column name row index < 0: " + std::to_string(mLabelParams.mColumnNameIdx));
+      }
+
       return -1;
     }
 
@@ -982,6 +705,11 @@ namespace rapidcsv
           return mRowNames.at(pRowName) - (mLabelParams.mColumnNameIdx + 1);
         }
       }
+      else
+      {
+        throw std::out_of_range("row name column index < 0: " + std::to_string(mLabelParams.mRowNameIdx));
+      }
+
       return -1;
     }
 

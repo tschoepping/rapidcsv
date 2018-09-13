@@ -13,14 +13,6 @@ namespace rapidcsv
   {
     pVal = static_cast<int>(roundf(100.0f * std::stof(pStr)));
   }
-
-  template<>
-  void Converter<int>::ToStr(const int& pVal, std::string& pStr) const
-  {
-    std::ostringstream out;
-    out << std::fixed << std::setprecision(2) << static_cast<float>(pVal) / 100.0f;
-    pStr = out.str();
-  }
 }
 
 int main()
@@ -48,9 +40,6 @@ int main()
     unittest::ExpectEqual(int, doc.GetCell<int>(1, 1), 1);
     unittest::ExpectEqual(int, doc.GetCell<int>(2, 1), 0);
     unittest::ExpectEqual(int, doc.GetCell<int>(3, 1), 1);
-
-    doc.SetCell<int>(0, 0, 12345);
-    unittest::ExpectEqual(std::string, doc.GetCell<std::string>(0, 0), "123.45");
   }
   catch(const std::exception& ex)
   {
