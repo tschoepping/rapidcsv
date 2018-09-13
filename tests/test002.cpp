@@ -1,4 +1,4 @@
-// test014.cpp - read column values, no row labels
+// test003.cpp - read column values
 
 #include <rapidcsv.h>
 #include "unittest.h"
@@ -8,9 +8,9 @@ int main()
   int rv = 0;
 
   std::string csv =
-    "A,B,C\n"
-    "3,9,81\n"
-    "4,16,256\n"
+    "-,A,B,C\n"
+    "1,3,9,81\n"
+    "2,4,16,256\n"
     ;
 
   std::string path = unittest::TempPath();
@@ -18,7 +18,7 @@ int main()
 
   try
   {
-    rapidcsv::Document doc(path, rapidcsv::LabelParams(0, -1));
+    rapidcsv::Document doc(path);
 
     std::vector<int> ints;
     std::vector<std::string> strs;

@@ -364,34 +364,6 @@ namespace rapidcsv
     }
 
     /**
-     * @brief   Remove column by index.
-     * @param   pColumnIdx            zero-based column index.
-     */
-    void RemoveColumn(const size_t pColumnIdx)
-    {
-      const ssize_t columnIdx = pColumnIdx + (mLabelParams.mRowNameIdx + 1);
-      for (auto itRow = mData.begin(); itRow != mData.end(); ++itRow)
-      {
-        itRow->erase(itRow->begin() + columnIdx);
-      }
-    }
-
-    /**
-     * @brief   Remove column by name.
-     * @param   pColumnName           column label name.
-     */
-    void RemoveColumn(const std::string& pColumnName)
-    {
-      ssize_t columnIdx = GetColumnIdx(pColumnName);
-      if (columnIdx < 0)
-      {
-        throw std::out_of_range("column not found: " + pColumnName);
-      }
-
-      RemoveColumn(columnIdx);
-    }
-
-    /**
      * @brief   Get number of data columns.
      * @returns column count.
      */
@@ -437,31 +409,6 @@ namespace rapidcsv
         throw std::out_of_range("row not found: " + pRowName);
       }
       return GetRow<T>(rowIdx);
-    }
-
-    /**
-     * @brief   Remove row by index.
-     * @param   pRowIdx               zero-based row index.
-     */
-    void RemoveRow(const size_t pRowIdx)
-    {
-      const ssize_t rowIdx = pRowIdx + (mLabelParams.mColumnNameIdx + 1);
-      mData.erase(mData.begin() + rowIdx);
-    }
-
-    /**
-     * @brief   Remove row by name.
-     * @param   pRowName              row label name.
-     */
-    void RemoveRow(const std::string& pRowName)
-    {
-      ssize_t rowIdx = GetRowIdx(pRowName);
-      if (rowIdx < 0)
-      {
-        throw std::out_of_range("row not found: " + pRowName);
-      }
-
-      RemoveRow(rowIdx);
     }
 
     /**

@@ -1,4 +1,4 @@
-// test016.cpp - read row values, no row labels
+// test042.cpp - test GetColumnCount() and GetRowCount()
 
 #include <rapidcsv.h>
 #include "unittest.h"
@@ -8,9 +8,9 @@ int main()
   int rv = 0;
 
   std::string csv =
-    "A,B,C\n"
-    "3,9,81\n"
-    "4,16,256\n"
+    "-,A,B,C\n"
+    "1,3,9,81\n"
+    "2,4,16,256\n"
     ;
 
   std::string path = unittest::TempPath();
@@ -18,22 +18,13 @@ int main()
 
   try
   {
-    rapidcsv::Document doc(path, rapidcsv::LabelParams(0, -1));
+    rapidcsv::Document doc1(path);
+    unittest::ExpectEqual(size_t, doc1.GetColumnCount(), 3);
+    unittest::ExpectEqual(size_t, doc1.GetRowCount(), 2);
 
-    std::vector<int> ints;
-    std::vector<std::string> strs;
-
-    ints = doc.GetRow<int>(0);
-    unittest::ExpectEqual(size_t, ints.size(), 3);
-    unittest::ExpectEqual(int, ints.at(0), 3);
-    unittest::ExpectEqual(int, ints.at(1), 9);
-    unittest::ExpectEqual(int, ints.at(2), 81);
-
-    strs = doc.GetRow<std::string>(1);
-    unittest::ExpectEqual(size_t, strs.size(), 3);
-    unittest::ExpectEqual(std::string, strs.at(0), "4");
-    unittest::ExpectEqual(std::string, strs.at(1), "16");
-    unittest::ExpectEqual(std::string, strs.at(2), "256");
+    rapidcsv::Document doc2(path, rapidcsv::LabelParams(-1, -1));
+    unittest::ExpectEqual(size_t, doc2.GetColumnCount(), 4);
+    unittest::ExpectEqual(size_t, doc2.GetRowCount(), 3);
   }
   catch(const std::exception& ex)
   {
@@ -45,4 +36,3 @@ int main()
 
   return rv;
 }
-
