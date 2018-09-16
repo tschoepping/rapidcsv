@@ -549,6 +549,16 @@ namespace rapidcsv
     }
 
   private:
+    inline ssize_t GetDataRowOffset() const
+    {
+      return (mLabelParams.mColumnNameIdx + 1);
+    }
+    
+    inline ssize_t GetDataColumnOffset() const
+    {
+      return (mLabelParams.mRowNameIdx + 1);
+    }
+    
     void ReadCsv()
     {
       std::ifstream file;
@@ -688,16 +698,6 @@ namespace rapidcsv
       return (mData.size() > 0) ? mData.at(0).size() : 0;
     }
 
-    inline ssize_t GetDataRowOffset() const
-    {
-      return (mLabelParams.mColumnNameIdx + 1);
-    }
-    
-    inline ssize_t GetDataColumnOffset() const
-    {
-      return (mLabelParams.mRowNameIdx + 1);
-    }
-    
     std::string GetDataCell(const ssize_t pColumnIdx, const ssize_t pRowIdx) const
     {
       return mData.at(pRowIdx).at(pColumnIdx);
