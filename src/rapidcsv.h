@@ -226,12 +226,13 @@ namespace rapidcsv
      * @brief   Constructor
      * @param   pColumnNameIdx        specifies the zero-based row index of the column labels, setting
      *                                it to -1 prevents column lookup by label name, and gives access
-     *                                to all rows as document data.
+     *                                to all rows as document data. Default 0 (enabling access
+     *                                using column name)..
      * @param   pRowNameIdx           specifies the zero-based column index of the row labels, setting
-     *                                it to -1 prevents row lookup by label name, and gives access
-     *                                to all columns as document data.
+     *                                it to >=0 enables row lookup by label name.
+     *                                Default -1 (preventing access to data using row name).
      */
-    explicit LabelParams(const int pColumnNameIdx = 0, const int pRowNameIdx = 0)
+    explicit LabelParams(const int pColumnNameIdx = 0, const int pRowNameIdx = -1)
       : mColumnNameIdx(pColumnNameIdx)
       , mRowNameIdx(pRowNameIdx)
     {
