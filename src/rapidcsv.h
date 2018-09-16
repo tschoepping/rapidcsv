@@ -406,17 +406,17 @@ namespace rapidcsv
     std::vector<T> GetRow(const size_t pRowIdx) const
     {
       const ssize_t rowIdx = pRowIdx + GetDataRowOffset();
-      std::vector<T> row;
+      const ssize_t dataColumnCount = GetDataColumnCount();
       Converter<T> converter(mConverterParams);
-      for (auto itCol = mData.at(rowIdx).begin(); itCol != mData.at(rowIdx).end(); ++itCol)
+      
+      std::vector<T> row;
+      for (ssize_t columnIdx = GetDataColumnOffset(); columnIdx < dataColumnCount; ++columnIdx)
       {
-        if (std::distance(mData.at(rowIdx).begin(), itCol) > mLabelParams.mRowNameIdx)
-        {
-          T val;
-          converter.ToVal(*itCol, val);
-          row.push_back(val);
-        }
+        T val;
+        converter.ToVal(GetDataCell(columnIdx, rowIdx), val);
+        row.push_back(val);
       }
+
       return row;
     }
 
@@ -442,7 +442,8 @@ namespace rapidcsv
      */
     size_t GetRowCount() const
     {
-      return mData.size() - GetDataRowOffset();
+      const ssize_t rowCount = GetDataRowCount() - GetDataRowOffset();
+      return (rowCount > 0) ? rowCount : 0;
     }
 
     /**
@@ -459,7 +460,7 @@ namespace rapidcsv
 
       T val;
       Converter<T> converter(mConverterParams);
-      converter.ToVal(mData.at(rowIdx).at(columnIdx), val);
+      converter.ToVal(GetDataCell(columnIdx, rowIdx), val);
       return val;
     }
 
