@@ -354,7 +354,7 @@ namespace rapidcsv
      * @returns vector of column data.
      */
     template<typename T>
-    std::vector<T> GetColumn(const size_t pColumnIdx) const
+    std::vector<T> GetColumn(const ssize_t pColumnIdx) const
     {
       const ssize_t columnIdx = pColumnIdx + GetDataColumnOffset();
       const ssize_t dataRowCount = GetDataRowCount(); 
@@ -403,7 +403,7 @@ namespace rapidcsv
      * @returns vector of row data.
      */
     template<typename T>
-    std::vector<T> GetRow(const size_t pRowIdx) const
+    std::vector<T> GetRow(const ssize_t pRowIdx) const
     {
       const ssize_t rowIdx = pRowIdx + GetDataRowOffset();
       const ssize_t dataColumnCount = GetDataColumnCount();
@@ -453,7 +453,7 @@ namespace rapidcsv
      * @returns cell data.
      */
     template<typename T>
-    T GetCell(const size_t pColumnIdx, const size_t pRowIdx) const
+    T GetCell(const ssize_t pColumnIdx, const ssize_t pRowIdx) const
     {
       const ssize_t columnIdx = pColumnIdx + GetDataColumnOffset();
       const ssize_t rowIdx = pRowIdx + GetDataRowOffset();
@@ -501,7 +501,7 @@ namespace rapidcsv
         throw std::out_of_range("column name row index < 0: " + std::to_string(mLabelParams.mColumnNameIdx));
       }
 
-      return mData.at(mLabelParams.mColumnNameIdx).at(columnIdx);
+      return GetDataCell(columnIdx, mLabelParams.mColumnNameIdx);
     }
 
     /**
@@ -512,9 +512,7 @@ namespace rapidcsv
     {
       if (mLabelParams.mColumnNameIdx >= 0)
       {
-        return std::vector<std::string>(mData.at(mLabelParams.mColumnNameIdx).begin() +
-                                        GetDataColumnOffset(),
-                                        mData.at(mLabelParams.mColumnNameIdx).end());
+        return GetRow<std::string>(-1);
       }
 
       return std::vector<std::string>();
@@ -533,7 +531,7 @@ namespace rapidcsv
         throw std::out_of_range("row name column index < 0: " + std::to_string(mLabelParams.mRowNameIdx));
       }
 
-      return mData.at(rowIdx).at(mLabelParams.mRowNameIdx);
+      return GetDataCell(mLabelParams.mRowNameIdx, rowIdx);
     }
 
     /**
@@ -542,18 +540,12 @@ namespace rapidcsv
      */
     std::vector<std::string> GetRowNames()
     {
-      std::vector<std::string> rownames;
       if (mLabelParams.mRowNameIdx >= 0)
       {
-        for (auto itRow = mData.begin(); itRow != mData.end(); ++itRow)
-        {
-          if (std::distance(mData.begin(), itRow) > mLabelParams.mColumnNameIdx)
-          {
-            rownames.push_back(itRow->at(mLabelParams.mRowNameIdx));
-          }
-        }
+        return GetColumn<std::string>(-1);
       }
-      return rownames;
+
+      return std::vector<std::string>();
     }
 
   private:
