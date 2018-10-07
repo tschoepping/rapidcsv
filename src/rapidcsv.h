@@ -992,7 +992,8 @@ namespace rapidcsv
       {
         for (auto itc = itr->begin(); itc != itr->end(); ++itc)
         {
-          if (std::string::npos == itc->find(mSeparatorParams.mSeparator))
+          if ((std::string::npos == itc->find(mSeparatorParams.mSeparator)) ||
+              ((itc->length() >= 2) && ((*itc)[0] == '\"') && ((*itc)[itc->length()-1] == '\"')))
           {
             pStream << *itc;
           } 
@@ -1000,6 +1001,7 @@ namespace rapidcsv
           {
             pStream << '"' << *itc << '"';
           }
+
           if (std::distance(itc, itr->end()) > 1)
           {
             pStream << mSeparatorParams.mSeparator;
