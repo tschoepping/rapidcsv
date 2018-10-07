@@ -354,13 +354,13 @@ namespace rapidcsv
 
     /**
      * @brief   Constructor
-     * @param   pStream               CSV data content.
+     * @param   pStream               specified an input stream to read CSV data from.
      * @param   pLabelParams          specifies which row and column should be treated as labels.
      * @param   pSeparatorParams      specifies which field and row separators should be used.
      * @param   pConverterParams      specifies how invalid numbers (including empty strings) should be
      *                                handled.
      */
-    explicit Document(std::istream &pStream,
+    explicit Document(std::istream& pStream,
                       const LabelParams& pLabelParams = LabelParams(),
                       const SeparatorParams& pSeparatorParams = SeparatorParams(),
                       const ConverterParams& pConverterParams = ConverterParams())
@@ -416,7 +416,7 @@ namespace rapidcsv
 
     /**
      * @brief   Write Document data to stream.
-     * @param   pStream               Stream to write the data to.
+     * @param   pStream               specified an output stream to write the data to.
      */
     void Save(std::ostream &pStream)
     {
