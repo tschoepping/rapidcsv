@@ -418,7 +418,7 @@ namespace rapidcsv
      * @brief   Write Document data to stream.
      * @param   pStream               specified an output stream to write the data to.
      */
-    void Save(std::ostream &pStream)
+    void Save(std::ostream& pStream)
     {
       WriteCsv(pStream);
     }
@@ -993,10 +993,10 @@ namespace rapidcsv
         for (auto itc = itr->begin(); itc != itr->end(); ++itc)
         {
           if ((std::string::npos == itc->find(mSeparatorParams.mSeparator)) ||
-              ((itc->length() >= 2) && ((*itc)[0] == '\"') && ((*itc)[itc->length()-1] == '\"')))
+              ((itc->length() >= 2) && ((*itc)[0] == '\"') && ((*itc)[itc->length() - 1] == '\"')))
           {
             pStream << *itc;
-          } 
+          }
           else
           {
             pStream << '"' << *itc << '"';
