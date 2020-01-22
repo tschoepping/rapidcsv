@@ -1057,8 +1057,11 @@ namespace rapidcsv
             else
             {
               ++lf;
-              row.push_back(mSeparatorParams.mTrim ? Trim(cell) : cell);
-              cell.clear();
+              if (!cell.empty())
+              {
+                row.push_back(mSeparatorParams.mTrim ? Trim(cell) : cell);
+                cell.clear();
+              }
               mData.push_back(row);
               row.clear();
               quoted = NOT_QUOTED;
