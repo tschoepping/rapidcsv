@@ -2,9 +2,9 @@
  * rapidcsv.h
  *
  * URL:      https://github.com/d99kris/rapidcsv
- * Version:  4.10
+ * Version:  6.00
  *
- * Copyright (C) 2017-2019 Kristofer Berggren
+ * Copyright (C) 2017-2020 Kristofer Berggren
  * All rights reserved.
  *
  * rapidcsv is distributed under the BSD 3-Clause license, see LICENSE for details.
@@ -20,6 +20,7 @@
 #include <codecvt>
 #endif
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -264,6 +265,9 @@ namespace rapidcsv
     pVal = pStr;
   }
 
+  template<typename T>
+  using ConvFunc = std::function<void (const std::string & pStr, T & pVal)>;
+
   /**
    * @brief     Datastructure holding parameters controlling which row and column should be
    *            treated as labels.
@@ -311,13 +315,16 @@ namespace rapidcsv
      * @param   pHasCR                  specifies whether a new document (i.e. not an existing document read)
      *                                  should use CR/LF instead of only LF (default is to use standard
      *                                  behavior of underlying platforms - CR/LF for Win, and LF for others).
+     * @param   pQuotedLinebreaks     specifies whether to allow line breaks in quoted text.
      */
     explicit SeparatorParams(const char pSeparator = ',', const bool pTrim = false,
-                             const bool pDropEmptyTrailingCells = false, const bool pHasCR = sPlatformHasCR)
+                             const bool pDropEmptyTrailingCells = false, const bool pHasCR = sPlatformHasCR,
+                             const bool pQuotedLinebreaks = false)
       : mSeparator(pSeparator)
       , mTrim(pTrim)
       , mDropEmptyTrailingCells(pDropEmptyTrailingCells)
       , mHasCR(pHasCR)
+      , mQuotedLinebreaks(pQuotedLinebreaks)
     {
     }
 
@@ -341,6 +348,11 @@ namespace rapidcsv
      * @brief   specifies whether new documents should use CR/LF instead of LF.
      */
     bool mHasCR;
+
+    /**
+     * @brief   specifies whether linebreaks are allowed within quoted text.
+     */
+    bool mQuotedLinebreaks;
   };
 
   /**
@@ -468,6 +480,29 @@ namespace rapidcsv
     }
 
     /**
+     * @brief   Get column by index.
+     * @param   pColumnIdx            zero-based column index.
+     * @param   pToVal                conversion function.
+     * @returns vector of column data.
+     */
+    template<typename T>
+    std::vector<T> GetColumn(const size_t pColumnIdx, ConvFunc<T> pToVal) const
+    {
+      const ssize_t columnIdx = pColumnIdx + (mLabelParams.mRowNameIdx + 1);
+      std::vector<T> column;
+      for (auto itRow = mData.begin(); itRow != mData.end(); ++itRow)
+      {
+        if (std::distance(mData.begin(), itRow) > mLabelParams.mColumnNameIdx)
+        {
+          T val;
+          pToVal(itRow->at(columnIdx), val);
+          column.push_back(val);
+        }
+      }
+      return column;
+    }
+
+    /**
      * @brief   Get column by name.
      * @param   pColumnName           column label name.
      * @returns vector of column data.
@@ -481,6 +516,23 @@ namespace rapidcsv
         throw std::out_of_range("column not found: " + pColumnName);
       }
       return GetColumn<T>(columnIdx);
+    }
+
+    /**
+     * @brief   Get column by name.
+     * @param   pColumnName           column label name.
+     * @param   pToVal                conversion function.
+     * @returns vector of column data.
+     */
+    template<typename T>
+    std::vector<T> GetColumn(const std::string& pColumnName, ConvFunc<T> pToVal) const
+    {
+      const ssize_t columnIdx = GetColumnIdx(pColumnName);
+      if (columnIdx < 0)
+      {
+        throw std::out_of_range("column not found: " + pColumnName);
+      }
+      return GetColumn<T>(columnIdx, pToVal);
     }
 
     /**
@@ -594,6 +646,30 @@ namespace rapidcsv
     }
 
     /**
+     * @brief   Get row by index.
+     * @param   pRowIdx               zero-based row index.
+     * @param   pToVal                conversion function.
+     * @returns vector of row data.
+     */
+    template<typename T>
+    std::vector<T> GetRow(const size_t pRowIdx, ConvFunc<T> pToVal) const
+    {
+      const ssize_t rowIdx = pRowIdx + (mLabelParams.mColumnNameIdx + 1);
+      std::vector<T> row;
+      Converter<T> converter(mConverterParams);
+      for (auto itCol = mData.at(rowIdx).begin(); itCol != mData.at(rowIdx).end(); ++itCol)
+      {
+        if (std::distance(mData.at(rowIdx).begin(), itCol) > mLabelParams.mRowNameIdx)
+        {
+          T val;
+          pToVal(*itCol, val);
+          row.push_back(val);
+        }
+      }
+      return row;
+    }
+
+    /**
      * @brief   Get row by name.
      * @param   pRowName              row label name.
      * @returns vector of row data.
@@ -607,6 +683,23 @@ namespace rapidcsv
         throw std::out_of_range("row not found: " + pRowName);
       }
       return GetRow<T>(rowIdx);
+    }
+
+    /**
+     * @brief   Get row by name.
+     * @param   pRowName              row label name.
+     * @param   pToVal                conversion function.
+     * @returns vector of row data.
+     */
+    template<typename T>
+    std::vector<T> GetRow(const std::string& pRowName, ConvFunc<T> pToVal) const
+    {
+      ssize_t rowIdx = GetRowIdx(pRowName);
+      if (rowIdx < 0)
+      {
+        throw std::out_of_range("row not found: " + pRowName);
+      }
+      return GetRow<T>(rowIdx, pToVal);
     }
 
     /**
@@ -712,6 +805,24 @@ namespace rapidcsv
     }
 
     /**
+     * @brief   Get cell by index.
+     * @param   pColumnIdx            zero-based column index.
+     * @param   pRowIdx               zero-based row index.
+     * @param   pToVal                conversion function.
+     * @returns cell data.
+     */
+    template<typename T>
+    T GetCell(const size_t pColumnIdx, const size_t pRowIdx, ConvFunc<T> pToVal) const
+    {
+      const ssize_t columnIdx = pColumnIdx + (mLabelParams.mRowNameIdx + 1);
+      const ssize_t rowIdx = pRowIdx + (mLabelParams.mColumnNameIdx + 1);
+
+      T val;
+      pToVal(mData.at(rowIdx).at(columnIdx), val);
+      return val;
+    }
+
+    /**
      * @brief   Get cell by name.
      * @param   pColumnName           column label name.
      * @param   pRowName              row label name.
@@ -736,6 +847,31 @@ namespace rapidcsv
     }
 
     /**
+     * @brief   Get cell by name.
+     * @param   pColumnName           column label name.
+     * @param   pRowName              row label name.
+     * @param   pToVal                conversion function.
+     * @returns cell data.
+     */
+    template<typename T>
+    T GetCell(const std::string& pColumnName, const std::string& pRowName, ConvFunc<T> pToVal) const
+    {
+      const ssize_t columnIdx = GetColumnIdx(pColumnName);
+      if (columnIdx < 0)
+      {
+        throw std::out_of_range("column not found: " + pColumnName);
+      }
+
+      const ssize_t rowIdx = GetRowIdx(pRowName);
+      if (rowIdx < 0)
+      {
+        throw std::out_of_range("row not found: " + pRowName);
+      }
+
+      return GetCell<T>(columnIdx, rowIdx, pToVal);
+    }
+
+    /**
      * @brief   Get cell by column name and row index.
      * @param   pColumnName           column label name.
      * @param   pRowIdx               zero-based row index.
@@ -754,6 +890,25 @@ namespace rapidcsv
     }
 
     /**
+     * @brief   Get cell by column name and row index.
+     * @param   pColumnName           column label name.
+     * @param   pRowIdx               zero-based row index.
+     * @param   pToVal                conversion function.
+     * @returns cell data.
+     */
+    template<typename T>
+    T GetCell(const std::string& pColumnName, const size_t pRowIdx, ConvFunc<T> pToVal) const
+    {
+      const ssize_t columnIdx = GetColumnIdx(pColumnName);
+      if (columnIdx < 0)
+      {
+        throw std::out_of_range("column not found: " + pColumnName);
+      }
+
+      return GetCell<T>(columnIdx, pRowIdx, pToVal);
+    }
+
+    /**
      * @brief   Get cell by column index and row name.
      * @param   pColumnIdx            zero-based column index.
      * @param   pRowName              row label name.
@@ -769,6 +924,25 @@ namespace rapidcsv
       }
 
       return GetCell<T>(pColumnIdx, rowIdx);
+    }
+
+    /**
+     * @brief   Get cell by column index and row name.
+     * @param   pColumnIdx            zero-based column index.
+     * @param   pRowName              row label name.
+     * @param   pToVal                conversion function.
+     * @returns cell data.
+     */
+    template<typename T>
+    T GetCell(const size_t pColumnIdx, const std::string& pRowName, ConvFunc<T> pToVal) const
+    {
+      const ssize_t rowIdx = GetRowIdx(pRowName);
+      if (rowIdx < 0)
+      {
+        throw std::out_of_range("row not found: " + pRowName);
+      }
+
+      return GetCell<T>(pColumnIdx, rowIdx, pToVal);
     }
 
     /**
@@ -962,7 +1136,8 @@ namespace rapidcsv
         {
           wstream.imbue(std::locale(wstream.getloc(),
                                     new std::codecvt_utf16<wchar_t, 0x10ffff,
-                                                           static_cast<std::codecvt_mode>(std::consume_header | std::little_endian)>));
+                                                           static_cast<std::codecvt_mode>(std::consume_header |
+                                                                                          std::little_endian)>));
         }
         else
         {
@@ -1025,19 +1200,34 @@ namespace rapidcsv
           }
           else if (buffer[i] == '\r')
           {
-            ++cr;
+            if (mSeparatorParams.mQuotedLinebreaks && quoted)
+            {
+              cell += buffer[i];
+            }
+            else
+            {
+              ++cr;
+            }
           }
           else if (buffer[i] == '\n')
           {
-            ++lf;
-            if (!mSeparatorParams.mDropEmptyTrailingCells ||
-                (mSeparatorParams.mDropEmptyTrailingCells && !cell.empty())) {
-              row.push_back(mSeparatorParams.mTrim ? Trim(cell) : cell);
-              cell.clear();
+            if (mSeparatorParams.mQuotedLinebreaks && quoted)
+            {
+              cell += buffer[i];
             }
-            mData.push_back(row);
-            row.clear();
-            quoted = false; // disallow line breaks in quoted string, by auto-unquote at linebreak
+            else
+            {
+              ++lf;
+              if (!mSeparatorParams.mDropEmptyTrailingCells ||
+                  (mSeparatorParams.mDropEmptyTrailingCells && !cell.empty()))
+              {
+                row.push_back(mSeparatorParams.mTrim ? Trim(cell) : cell);
+                cell.clear();
+              }
+              mData.push_back(row);
+              row.clear();
+              quoted = false;
+            }
           }
           else
           {
@@ -1212,17 +1402,13 @@ namespace rapidcsv
     static std::string Trim(const std::string& pStr)
     {
       std::string str = pStr;
-      
+
       // ltrim
-      str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](int ch) {
-        return !isspace(ch);
-      }));
+      str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](int ch) { return !isspace(ch); }));
 
       // rtrim
-      str.erase(std::find_if(str.rbegin(), str.rend(), [](int ch) {
-        return !isspace(ch);
-      }).base(), str.end());
-    
+      str.erase(std::find_if(str.rbegin(), str.rend(), [](int ch) { return !isspace(ch); }).base(), str.end());
+
       return str;
     }
 
@@ -1231,7 +1417,7 @@ namespace rapidcsv
     LabelParams mLabelParams;
     SeparatorParams mSeparatorParams;
     ConverterParams mConverterParams;
-    std::vector<std::vector<std::string> > mData;
+    std::vector<std::vector<std::string>> mData;
     std::map<std::string, size_t> mColumnNames;
     std::map<std::string, size_t> mRowNames;
 #ifdef HAS_CODECVT
